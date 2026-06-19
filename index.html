@@ -1,765 +1,642 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft 3D — Исправленное появление</title>
-    <style>
-        * { margin: 0; padding: 0; }
-        body { overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; background: #000; }
-        #info {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            background: rgba(0,0,0,0.6);
-            padding: 8px 16px;
-            border-radius: 8px;
-            pointer-events: none;
-            user-select: none;
-            z-index: 10;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.1);
-            font-size: 14px;
-        }
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 30px;
-            height: 30px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 10;
-            opacity: 0.8;
-        }
-        #crosshair::before, #crosshair::after {
-            content: '';
-            position: absolute;
-            background: white;
-            box-shadow: 0 0 4px rgba(0,0,0,0.5);
-        }
-        #crosshair::before {
-            width: 2px;
-            height: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        #crosshair::after {
-            width: 100%;
-            height: 2px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        #controls {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            background: rgba(0,0,0,0.6);
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 13px;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.15);
-            pointer-events: none;
-            z-index: 10;
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        #controls span {
-            background: rgba(255,255,255,0.1);
-            padding: 3px 12px;
-            border-radius: 20px;
-            white-space: nowrap;
-        }
-        #blocker {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.4);
-            z-index: 20;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            backdrop-filter: blur(6px);
-            flex-direction: column;
-        }
-        #blocker button {
-            padding: 18px 50px;
-            font-size: 32px;
-            background: #4CAF50;
-            border: none;
-            border-radius: 14px;
-            color: white;
-            cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
-            font-weight: bold;
-        }
-        #blocker button:hover {
-            background: #45a049;
-            transform: scale(1.05);
-        }
-        #blocker p {
-            margin-top: 20px;
-            font-size: 18px;
-            opacity: 0.9;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-        }
-        #stats {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: white;
-            background: rgba(0,0,0,0.6);
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 14px;
-            pointer-events: none;
-            z-index: 10;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            min-width: 120px;
-        }
-        #stats div { display: flex; justify-content: space-between; }
-        #hotbar {
-            position: absolute;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 4px;
-            background: rgba(0,0,0,0.6);
-            padding: 6px 10px;
-            border-radius: 12px;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.15);
-            z-index: 10;
-        }
-        .slot {
-            width: 50px;
-            height: 50px;
-            background: rgba(255,255,255,0.08);
-            border: 2px solid rgba(255,255,255,0.15);
-            border-radius: 6px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 22px;
-            transition: 0.2s;
-            cursor: pointer;
-            position: relative;
-            user-select: none;
-        }
-        .slot.active {
-            border-color: #fff;
-            background: rgba(255,255,255,0.2);
-            box-shadow: 0 0 15px rgba(255,255,255,0.3);
-        }
-        .slot .count {
-            font-size: 12px;
-            background: rgba(0,0,0,0.6);
-            padding: 1px 6px;
-            border-radius: 10px;
-            margin-top: 2px;
-            color: #fff;
-        }
-        .slot .key {
-            position: absolute;
-            top: 2px;
-            left: 6px;
-            font-size: 11px;
-            opacity: 0.5;
-            font-weight: bold;
-        }
-        .slot .label {
-            font-size: 18px;
-        }
-        #coord {
-            position: absolute;
-            bottom: 140px;
-            left: 20px;
-            color: #aaa;
-            background: rgba(0,0,0,0.5);
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-family: monospace;
-            pointer-events: none;
-            z-index: 10;
-            backdrop-filter: blur(2px);
-        }
-        #blocker .version { margin-top: 10px; font-size: 14px; opacity: 0.6; }
-        #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 20px 40px;
-            border-radius: 12px;
-            z-index: 30;
-            display: none;
-        }
-        .slot.empty { opacity: 0.3; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Максим Ткачев · Программист</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f9fafc;
+      color: #1e1e2a;
+      line-height: 1.5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem 1.5rem;
+    }
+
+    .card {
+      max-width: 1000px;
+      width: 100%;
+      background: white;
+      border-radius: 2.5rem;
+      box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.15), 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+      padding: 3rem 2.5rem;
+      transition: transform 0.2s ease;
+    }
+
+    /* шапка: аватар + контактная информация */
+    .profile-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 2.5rem;
+      margin-bottom: 3rem;
+      border-bottom: 1px solid #eaedf2;
+      padding-bottom: 2.5rem;
+    }
+
+    .avatar {
+      flex-shrink: 0;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.8rem;
+      font-weight: 600;
+      color: white;
+      box-shadow: 0 12px 28px -8px rgba(37, 99, 235, 0.3);
+      letter-spacing: 0.5px;
+    }
+
+    .title-group h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #0b0b14;
+      margin-bottom: 0.3rem;
+    }
+
+    .title-group .badge {
+      display: inline-block;
+      background: #eef2ff;
+      color: #2563eb;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.25rem 1rem;
+      border-radius: 40px;
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.3px;
+    }
+
+    .title-group p {
+      font-size: 1.2rem;
+      color: #4a4a5a;
+      font-weight: 400;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .title-group p i {
+      color: #2563eb;
+      font-size: 1rem;
+      width: 1.4rem;
+    }
+
+    .contact-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem 1.8rem;
+      margin-top: 0.75rem;
+    }
+
+    .contact-links a {
+      text-decoration: none;
+      color: #2c2c3a;
+      font-weight: 500;
+      font-size: 1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: color 0.2s;
+      border-bottom: 1px solid transparent;
+    }
+
+    .contact-links a i {
+      color: #2563eb;
+      font-size: 1.1rem;
+      width: 1.2rem;
+      text-align: center;
+    }
+
+    .contact-links a:hover {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+    }
+
+    /* секции */
+    .section {
+      margin-bottom: 2.8rem;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      font-weight: 600;
+      font-size: 1.2rem;
+      letter-spacing: -0.01em;
+      color: #11111d;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title i {
+      color: #2563eb;
+      font-size: 1.3rem;
+    }
+
+    .section-title:after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e6eaf0;
+      margin-left: 0.5rem;
+    }
+
+    .about-text {
+      font-size: 1.05rem;
+      color: #2a2a38;
+      max-width: 80%;
+      background: #f8faff;
+      padding: 1.2rem 1.8rem;
+      border-radius: 24px;
+      border-left: 6px solid #2563eb;
+      line-height: 1.6;
+    }
+
+    /* технологии — плитка */
+    .tech-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem 1.2rem;
+    }
+
+    .tech-item {
+      background: white;
+      border: 1px solid #e5e9f0;
+      padding: 0.5rem 1.3rem;
+      border-radius: 60px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #1f1f2e;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .tech-item i {
+      color: #2563eb;
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+
+    .tech-item:hover {
+      border-color: #2563eb;
+      background: #f5f9ff;
+      transform: translateY(-2px);
+    }
+
+    /* проекты — карточки */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .project-card {
+      background: #fafcff;
+      border: 1px solid #eef2f8;
+      border-radius: 1.8rem;
+      padding: 1.5rem 1.2rem 1.2rem 1.2rem;
+      transition: all 0.2s ease;
+    }
+
+    .project-card:hover {
+      border-color: #bdd3ff;
+      background: white;
+      box-shadow: 0 10px 20px -10px rgba(0, 20, 60, 0.08);
+    }
+
+    .project-card h4 {
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .project-card h4 i {
+      color: #2563eb;
+      font-size: 0.9rem;
+    }
+
+    .project-card p {
+      font-size: 0.9rem;
+      color: #4e4e62;
+      margin-bottom: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .project-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .project-tags span {
+      background: #eef2f8;
+      border-radius: 30px;
+      padding: 0.15rem 0.8rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: #2f3a4b;
+      letter-spacing: 0.2px;
+    }
+
+    /* опыт / образование */
+    .exp-item {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 2rem;
+      background: #fafcff;
+      border-radius: 1.8rem;
+      padding: 1rem 1.8rem;
+      border: 1px solid #eef2f8;
+      margin-bottom: 0.8rem;
+      align-items: baseline;
+    }
+
+    .exp-item .year {
+      font-weight: 600;
+      color: #2563eb;
+      min-width: 80px;
+      font-size: 0.9rem;
+    }
+
+    .exp-item .desc {
+      font-weight: 500;
+      color: #16161f;
+      flex: 1;
+    }
+
+    .exp-item .desc small {
+      font-weight: 400;
+      color: #5d5d72;
+      font-size: 0.9rem;
+      display: block;
+      margin-top: 0.1rem;
+    }
+
+    /* футер */
+    .footer-note {
+      margin-top: 3rem;
+      padding-top: 1.8rem;
+      border-top: 1px solid #eaedf2;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem;
+      color: #5c5c70;
+      font-size: 0.95rem;
+    }
+
+    .footer-note .social a {
+      color: #2f2f40;
+      margin-left: 1.2rem;
+      font-size: 1.2rem;
+      transition: color 0.2s;
+    }
+
+    .footer-note .social a:hover {
+      color: #2563eb;
+    }
+
+    /* --- НОВЫЕ СТИЛИ ДЛЯ ИГРЫ И МУЗЫКИ --- */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .feature-card {
+      background: #fafcff;
+      border: 1px solid #eef2f8;
+      border-radius: 1.8rem;
+      padding: 1.5rem 1.5rem 1.8rem;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .feature-card:hover {
+      border-color: #bdd3ff;
+      background: white;
+      box-shadow: 0 10px 20px -10px rgba(0, 20, 60, 0.08);
+    }
+
+    .feature-card .icon-wrap {
+      font-size: 2rem;
+      color: #2563eb;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card h4 {
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .feature-card p {
+      font-size: 0.9rem;
+      color: #4e4e62;
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #2563eb;
+      color: white;
+      font-weight: 500;
+      padding: 0.5rem 1.6rem;
+      border-radius: 40px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: background 0.2s, transform 0.1s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+      transform: scale(0.97);
+    }
+
+    .btn i {
+      margin-right: 6px;
+    }
+
+    .music-player {
+      background: #f1f5f9;
+      border-radius: 60px;
+      padding: 0.4rem 0.6rem 0.4rem 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .music-player .track-info {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #1e1e2a;
+    }
+
+    .music-player .track-info i {
+      color: #2563eb;
+      font-size: 1rem;
+    }
+
+    .music-player audio {
+      height: 32px;
+      max-width: 180px;
+      border-radius: 40px;
+      outline: none;
+    }
+
+    @media (max-width: 700px) {
+      .card {
+        padding: 2rem 1.5rem;
+      }
+      .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      .avatar {
+        width: 90px;
+        height: 90px;
+        font-size: 2.8rem;
+      }
+      .title-group h1 {
+        font-size: 2.2rem;
+      }
+      .about-text {
+        max-width: 100%;
+        padding: 1rem 1.2rem;
+      }
+      .contact-links {
+        gap: 0.4rem 1rem;
+      }
+      .projects-grid {
+        grid-template-columns: 1fr;
+      }
+      .exp-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2rem;
+        padding: 1rem 1.2rem;
+      }
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+      .music-player {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.8rem;
+        border-radius: 1.5rem;
+      }
+      .music-player audio {
+        max-width: 100%;
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 450px) {
+      .title-group h1 {
+        font-size: 1.8rem;
+      }
+      .tech-grid {
+        gap: 0.5rem;
+      }
+      .tech-item {
+        font-size: 0.8rem;
+        padding: 0.3rem 1rem;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div id="info">⛏️ Minecraft 3D — Инвентарь</div>
-    <div id="stats">
-        <div><span>Блоков:</span> <span id="blockCount">0</span></div>
-        <div><span>FPS:</span> <span id="fpsCounter">0</span></div>
+  <div class="card">
+    <!-- Шапка профиля -->
+    <div class="profile-header">
+      <div class="avatar">MT</div>
+      <div class="title-group">
+        <div class="badge"><i class="fas fa-code" style="margin-right: 6px;"></i> Программист · Full Stack</div>
+        <h1>Максим Ткачев</h1>
+        <p>
+          <i class="fas fa-map-pin"></i> Москва, Россия
+          <span style="opacity: 0.4; margin: 0 4px;">|</span>
+          <i class="fas fa-briefcase"></i> 6+ лет опыта
+        </p>
+        <div class="contact-links">
+          <a href="mailto:m.tkachev@dev.me"><i class="fas fa-envelope"></i> m.tkachev@dev.me</a>
+          <a href="#"><i class="fab fa-telegram"></i> @tkachev_dev</a>
+          <a href="#"><i class="fab fa-github"></i> github.com/tkachev</a>
+          <a href="#"><i class="fab fa-linkedin"></i> linkedin.com/in/tkachev</a>
+        </div>
+      </div>
     </div>
-    <div id="coord">📍 0, 0, 0</div>
-    <div id="crosshair"></div>
-    <div id="hotbar"></div>
-    <div id="controls">
-        <span>WASD — ходьба</span>
-        <span>Пробел — прыжок</span>
-        <span>ЛКМ — разрушить</span>
-        <span>ПКМ — поставить</span>
-        <span>Shift — бег</span>
-        <span>1-9 — выбор слота</span>
+
+    <!-- О себе -->
+    <div class="section">
+      <div class="section-title">
+        <i class="fas fa-user-astronaut"></i> О себе
+      </div>
+      <div class="about-text">
+        Разрабатываю надёжные веб-приложения с душой. Люблю чистый код, архитектуру и решать сложные задачи.
+        Постоянно учусь и применяю современные подходы. Создаю продукты, которыми удобно пользоваться.
+      </div>
     </div>
-    <div id="blocker">
-        <button id="startBtn">▶ Играть</button>
-        <p>Нажмите, чтобы захватить курсор</p>
-        <div class="version">Исправленное появление · Инвентарь · Дроп</div>
+
+    <!-- --- НОВЫЙ БЛОК: ИГРА И МУЗЫКА --- -->
+    <div class="section">
+      <div class="section-title">
+        <i class="fas fa-star"></i> Мои проекты
+      </div>
+      <div class="feature-grid">
+        <!-- Карточка игры -->
+        <div class="feature-card">
+          <div class="icon-wrap"><i class="fas fa-gamepad"></i></div>
+          <h4>Пыльный D2</h4>
+          <p>Мини-игра в стиле CS. Проверь свою реакцию!</p>
+          <a href="https://maksimtkac550-arch.github.io/test/" target="_blank" class="btn">
+            <i class="fas fa-play"></i> Играть
+          </a>
+        </div>
+        <!-- Карточка музыки -->
+        <div class="feature-card">
+          <div class="icon-wrap"><i class="fas fa-headphones"></i></div>
+          <h4>Пыльный D2 (трек)</h4>
+          <p>Эпичный байопик о S1mple от Suno AI</p>
+          <div class="music-player">
+            <span class="track-info">
+              <i class="fas fa-music"></i>
+              <span>Пыльный D2</span>
+            </span>
+            <audio controls>
+              <source src="https://suno.com/song/9f37ad4d-222e-4e19-b9a0-857e2dc178a5" type="audio/mpeg">
+              Ваш браузер не поддерживает аудио.
+            </audio>
+          </div>
+          <p style="margin-top: 0.6rem; font-size: 0.7rem; color: #7c7c8a;">
+            <i class="fas fa-external-link-alt"></i>
+            <a href="https://suno.com/song/9f37ad4d-222e-4e19-b9a0-857e2dc178a5" target="_blank" style="color: #2563eb; text-decoration: none;">Открыть на Suno</a>
+          </p>
+        </div>
+      </div>
     </div>
-    <div id="loading">Генерация мира...</div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
-            }
-        }
-    </script>
+    <!-- Технологии -->
+    <div class="section">
+      <div class="section-title">
+        <i class="fas fa-microchip"></i> Стек технологий
+      </div>
+      <div class="tech-grid">
+        <span class="tech-item"><i class="fab fa-react"></i> React</span>
+        <span class="tech-item"><i class="fab fa-vuejs"></i> Vue.js</span>
+        <span class="tech-item"><i class="fab fa-node"></i> Node.js</span>
+        <span class="tech-item"><i class="fab fa-python"></i> Python</span>
+        <span class="tech-item"><i class="fas fa-database"></i> PostgreSQL</span>
+        <span class="tech-item"><i class="fas fa-cloud"></i> Docker / K8s</span>
+        <span class="tech-item"><i class="fab fa-aws"></i> AWS</span>
+        <span class="tech-item"><i class="fas fa-code"></i> TypeScript</span>
+        <span class="tech-item"><i class="fas fa-robot"></i> AI / LLM</span>
+      </div>
+    </div>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+    <!-- Проекты -->
+    <div class="section">
+      <div class="section-title">
+        <i class="fas fa-folder-open"></i> Избранные проекты
+      </div>
+      <div class="projects-grid">
+        <div class="project-card">
+          <h4><i class="fas fa-chart-line"></i> Analytics Pro</h4>
+          <p>Дашборд для бизнес-аналитики с реальным временем и AI-инсайтами.</p>
+          <div class="project-tags">
+            <span>React</span><span>D3</span><span>FastAPI</span>
+          </div>
+        </div>
+        <div class="project-card">
+          <h4><i class="fas fa-cart-shopping"></i> MarketFlow</h4>
+          <p>Платформа для автоматизации интернет-торговли с интеграцией 1С.</p>
+          <div class="project-tags">
+            <span>Vue</span><span>Node</span><span>MongoDB</span>
+          </div>
+        </div>
+        <div class="project-card">
+          <h4><i class="fas fa-robot"></i> Chatlytics</h4>
+          <p>Чат-бот для поддержки клиентов на основе LLM с RAG-архитектурой.</p>
+          <div class="project-tags">
+            <span>Python</span><span>LangChain</span><span>Redis</span>
+          </div>
+        </div>
+        <div class="project-card">
+          <h4><i class="fas fa-cloud-sun"></i> WeatherPulse</h4>
+          <p>Микросервисный агрегатор погоды с оповещениями и графиками.</p>
+          <div class="project-tags">
+            <span>Go</span><span>Kafka</span><span>React</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // ----- НАСТРОЙКИ -----
-        const PLAYER_HEIGHT = 2.0;
-        const EYE_HEIGHT = 1.7;
-        const PLAYER_RADIUS = 0.4;
-        const WORLD_SIZE_X = 45;
-        const WORLD_SIZE_Y = 50;
-        const GRAVITY = -32;
-        const JUMP_SPEED = 11.0;
-        const REACH = 12;
+    <!-- Опыт + образование -->
+    <div class="section">
+      <div class="section-title">
+        <i class="fas fa-briefcase"></i> Опыт &amp; образование
+      </div>
+      <div class="exp-item">
+        <span class="year"><i class="far fa-calendar-alt" style="margin-right: 6px;"></i>2023 – наст.вр.</span>
+        <span class="desc">Tech Lead · SmartDev <small>Разработка высоконагруженных систем, управление командой из 8 человек</small></span>
+      </div>
+      <div class="exp-item">
+        <span class="year"><i class="far fa-calendar-alt" style="margin-right: 6px;"></i>2019 – 2023</span>
+        <span class="desc">Full Stack Developer · IT-Factory <small>Проектирование и разработка B2B-решений, внедрение CI/CD</small></span>
+      </div>
+      <div class="exp-item">
+        <span class="year"><i class="fas fa-graduation-cap"></i> 2015 – 2019</span>
+        <span class="desc">МГТУ им. Баумана · Факультет ИУ <small>Прикладная математика и информатика (диплом с отличием)</small></span>
+      </div>
+    </div>
 
-        // ----- ИНИЦИАЛИЗАЦИЯ -----
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 60, 120);
-
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 250);
-        camera.position.set(0, 2, 0); // начальная позиция
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = false;
-        document.body.appendChild(renderer.domElement);
-
-        // ----- ОСВЕЩЕНИЕ -----
-        const sunLight = new THREE.DirectionalLight(0xffeedd, 1.0);
-        sunLight.position.set(60, 120, 40);
-        scene.add(sunLight);
-
-        const ambient = new THREE.AmbientLight(0x404060, 0.6);
-        scene.add(ambient);
-        const hemi = new THREE.HemisphereLight(0x87CEEB, 0x3a7d44, 0.4);
-        scene.add(hemi);
-
-        // ----- ОБЛАКА -----
-        function createCloud() {
-            const group = new THREE.Group();
-            const geo = new THREE.SphereGeometry(0.6, 6, 6);
-            const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, roughness: 0.9 });
-            for (let i = 0; i < 6; i++) {
-                const s = new THREE.Mesh(geo, mat);
-                s.position.set((i - 2.5) * 0.8, 0, (i % 3 - 1) * 0.5);
-                s.scale.set(1 + Math.random() * 0.5, 0.6, 1 + Math.random() * 0.5);
-                group.add(s);
-            }
-            return group;
-        }
-        for (let i = 0; i < 20; i++) {
-            const cloud = createCloud();
-            cloud.position.set(
-                (Math.random() - 0.5) * 100,
-                25 + Math.random() * 10,
-                (Math.random() - 0.5) * 100
-            );
-            cloud.scale.set(1 + Math.random() * 2, 1, 1 + Math.random() * 2);
-            scene.add(cloud);
-        }
-
-        // ----- УПРАВЛЕНИЕ -----
-        const controls = new PointerLockControls(camera, document.body);
-        let isLocked = false;
-        document.getElementById('startBtn').addEventListener('click', () => controls.lock());
-        controls.addEventListener('lock', () => {
-            isLocked = true;
-            document.getElementById('blocker').style.display = 'none';
-        });
-        controls.addEventListener('unlock', () => {
-            isLocked = false;
-            document.getElementById('blocker').style.display = 'flex';
-        });
-
-        // ----- ФИЗИКА -----
-        let velocity = new THREE.Vector3(0, 0, 0);
-        let isOnGround = false;
-
-        // ----- БЛОКИ и ИНВЕНТАРЬ -----
-        const blocks = new Map();
-        const inventory = {};
-        const BLOCK_TYPES = [
-            { id: 'grass',   color: '#7cb342', label: '🌿' },
-            { id: 'dirt',    color: '#8d6e63', label: '🟫' },
-            { id: 'stone',   color: '#9e9e9e', label: '🪨' },
-            { id: 'wood',    color: '#a1887f', label: '🪵' },
-            { id: 'plank',   color: '#e6cba3', label: '🟧' },
-            { id: 'sand',    color: '#f5e6b8', label: '🏖️' },
-            { id: 'cobblestone', color: '#7a7a7a', label: '🧱' },
-            { id: 'leaves',  color: '#558b2f', label: '🍃' },
-        ];
-
-        BLOCK_TYPES.forEach(t => inventory[t.id] = 0);
-
-        function createBlockTexture(color, variant = 0) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = color;
-            ctx.fillRect(0, 0, 64, 64);
-            ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < 8; i++) {
-                for (let j = 0; j < 8; j++) {
-                    if ((i + j + variant) % 2 === 0) {
-                        ctx.fillStyle = 'rgba(255,255,255,0.05)';
-                        ctx.fillRect(i * 8, j * 8, 8, 8);
-                    }
-                }
-            }
-            ctx.fillStyle = 'rgba(0,0,0,0.08)';
-            for (let i = 0; i < 30; i++) {
-                ctx.fillRect(Math.random() * 64, Math.random() * 64, 2 + Math.random() * 4, 2 + Math.random() * 4);
-            }
-            return new THREE.CanvasTexture(canvas);
-        }
-
-        const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
-        const materials = {};
-        BLOCK_TYPES.forEach(t => {
-            materials[t.id] = new THREE.MeshStandardMaterial({
-                map: createBlockTexture(t.color, BLOCK_TYPES.indexOf(t)),
-                roughness: 0.8,
-                metalness: t.id === 'stone' ? 0.1 : 0
-            });
-        });
-
-        let selectedSlot = 0;
-
-        function addBlock(x, y, z, typeId) {
-            const key = `${Math.round(x)},${Math.round(y)},${Math.round(z)}`;
-            if (blocks.has(key)) return false;
-            const material = materials[typeId];
-            if (!material) return false;
-            const block = new THREE.Mesh(blockGeometry, material);
-            block.position.set(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(z) + 0.5);
-            block.castShadow = false;
-            block.receiveShadow = false;
-            scene.add(block);
-            blocks.set(key, { mesh: block, typeId });
-            document.getElementById('blockCount').textContent = blocks.size;
-            return true;
-        }
-
-        function removeBlock(x, y, z) {
-            const key = `${Math.round(x)},${Math.round(y)},${Math.round(z)}`;
-            if (!blocks.has(key)) return false;
-            const data = blocks.get(key);
-            const typeId = data.typeId;
-            scene.remove(data.mesh);
-            blocks.delete(key);
-            inventory[typeId] = (inventory[typeId] || 0) + 1;
-            updateHotbar();
-            document.getElementById('blockCount').textContent = blocks.size;
-            return true;
-        }
-
-        function isBlockAt(x, y, z) {
-            const key = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
-            return blocks.has(key);
-        }
-
-        // ----- КОЛЛИЗИИ -----
-        function checkCollision(pos) {
-            const r = PLAYER_RADIUS;
-            const h = PLAYER_HEIGHT;
-            const eye = EYE_HEIGHT;
-            const bottom = pos.y - eye;
-            const top = bottom + h;
-
-            const offsets = [];
-            for (let dx of [-r, 0, r]) {
-                for (let dz of [-r, 0, r]) {
-                    offsets.push([dx, dz]);
-                }
-            }
-            offsets.push([r*0.7, r*0.7], [-r*0.7, r*0.7], [r*0.7, -r*0.7], [-r*0.7, -r*0.7]);
-
-            const steps = 10;
-            for (let i = 0; i <= steps; i++) {
-                const yOffset = bottom + (i / steps) * h;
-                for (const [dx, dz] of offsets) {
-                    if (isBlockAt(pos.x + dx, yOffset, pos.z + dz)) return true;
-                }
-            }
-            return false;
-        }
-
-        function canMoveTo(newPos) {
-            if (checkCollision(newPos)) return false;
-            const test = newPos.clone();
-            test.y += 0.01;
-            if (checkCollision(test)) return false;
-            return true;
-        }
-
-        // ----- ФУНКЦИЯ КОРРЕКЦИИ ПОЗИЦИИ (чтобы не проваливаться при старте) -----
-        function fixPlayerPosition() {
-            const pos = camera.position.clone();
-            // Если игрок внутри блоков, поднимаем его до безопасного места
-            if (checkCollision(pos)) {
-                let y = pos.y;
-                // Поднимаем, пока не найдём свободное место
-                while (checkCollision(new THREE.Vector3(pos.x, y, pos.z)) && y < 100) {
-                    y += 0.1;
-                }
-                camera.position.y = y;
-                // Сбрасываем скорость, чтобы не провалиться обратно
-                velocity.y = 0;
-                isOnGround = false;
-            }
-            // Дополнительно проверяем, не висит ли он в воздухе (если под ним нет блока)
-            // Это не критично, гравитация опустит.
-        }
-
-        // ----- ПОДСВЕТКА -----
-        let highlightMesh = null;
-        function createHighlight() {
-            const geo = new THREE.BoxGeometry(1.005, 1.005, 1.005);
-            const edges = new THREE.EdgesGeometry(geo);
-            const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
-            const line = new THREE.LineSegments(edges, mat);
-            scene.add(line);
-            return line;
-        }
-        highlightMesh = createHighlight();
-        highlightMesh.visible = false;
-
-        // ----- РЕЙКАСТ -----
-        const raycaster = new THREE.Raycaster();
-        raycaster.far = REACH;
-
-        function getIntersectedBlock() {
-            raycaster.setFromCamera({ x: 0, y: 0 }, camera);
-            const meshes = Array.from(blocks.values()).map(d => d.mesh);
-            const intersects = raycaster.intersectObjects(meshes);
-            if (intersects.length > 0) {
-                const hit = intersects[0];
-                let hitPos = null;
-                for (const [key, data] of blocks.entries()) {
-                    if (data.mesh === hit.object) {
-                        hitPos = key.split(',').map(Number);
-                        break;
-                    }
-                }
-                if (hitPos) {
-                    return { pos: hitPos, normal: hit.face.normal.clone().transformDirection(hit.object.matrixWorld).round() };
-                }
-            }
-            return null;
-        }
-
-        // Обработка кликов
-        function onMouseClick(event) {
-            if (!isLocked) return;
-            const isRight = event.button === 2;
-            const hit = getIntersectedBlock();
-            if (!hit) return;
-
-            if (!isRight) {
-                removeBlock(hit.pos[0], hit.pos[1], hit.pos[2]);
-            } else {
-                const typeId = BLOCK_TYPES[selectedSlot]?.id;
-                if (!typeId) return;
-                if (inventory[typeId] <= 0) return;
-                const nx = hit.pos[0] + hit.normal.x;
-                const ny = hit.pos[1] + hit.normal.y;
-                const nz = hit.pos[2] + hit.normal.z;
-                const p = camera.position;
-                const bottom = p.y - EYE_HEIGHT;
-                const top = bottom + PLAYER_HEIGHT;
-                const cx = nx + 0.5, cy = ny + 0.5, cz = nz + 0.5;
-                if (Math.abs(cx - p.x) < 0.8 && Math.abs(cz - p.z) < 0.8 && cy > bottom - 0.1 && cy < top + 0.1) return;
-                if (inventory[typeId] > 0) {
-                    inventory[typeId]--;
-                    if (addBlock(nx, ny, nz, typeId)) {
-                        updateHotbar();
-                    } else {
-                        inventory[typeId]++;
-                    }
-                }
-            }
-        }
-        window.addEventListener('click', onMouseClick);
-        window.addEventListener('contextmenu', e => e.preventDefault());
-
-        // ----- КЛАВИАТУРА -----
-        const keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
-        window.addEventListener('keydown', (e) => {
-            switch (e.code) {
-                case 'KeyW': keys.w = true; e.preventDefault(); break;
-                case 'KeyA': keys.a = true; e.preventDefault(); break;
-                case 'KeyS': keys.s = true; e.preventDefault(); break;
-                case 'KeyD': keys.d = true; e.preventDefault(); break;
-                case 'Space': keys.space = true; e.preventDefault(); break;
-                case 'ShiftLeft': keys.shift = true; e.preventDefault(); break;
-                default:
-                    const num = parseInt(e.key);
-                    if (num >= 1 && num <= 9 && num <= BLOCK_TYPES.length) {
-                        selectedSlot = num - 1;
-                        updateHotbar();
-                        e.preventDefault();
-                    }
-                    break;
-            }
-        });
-        window.addEventListener('keyup', (e) => {
-            switch (e.code) {
-                case 'KeyW': keys.w = false; e.preventDefault(); break;
-                case 'KeyA': keys.a = false; e.preventDefault(); break;
-                case 'KeyS': keys.s = false; e.preventDefault(); break;
-                case 'KeyD': keys.d = false; e.preventDefault(); break;
-                case 'Space': keys.space = false; e.preventDefault(); break;
-                case 'ShiftLeft': keys.shift = false; e.preventDefault(); break;
-            }
-        });
-
-        // ----- ГОРЯЧАЯ ПАНЕЛЬ -----
-        const hotbarEl = document.getElementById('hotbar');
-        function updateHotbar() {
-            hotbarEl.innerHTML = '';
-            BLOCK_TYPES.forEach((type, i) => {
-                const slot = document.createElement('div');
-                const count = inventory[type.id] || 0;
-                slot.className = 'slot' + (i === selectedSlot ? ' active' : '') + (count === 0 ? ' empty' : '');
-                slot.innerHTML = `
-                    <span class="key">${i+1}</span>
-                    <span class="label">${type.label}</span>
-                    <span class="count">${count}</span>
-                `;
-                slot.title = `${type.id} (${count})`;
-                slot.addEventListener('click', () => {
-                    selectedSlot = i;
-                    updateHotbar();
-                });
-                hotbarEl.appendChild(slot);
-            });
-        }
-        updateHotbar();
-
-        // ----- ФИЗИКА -----
-        function updatePhysics(delta) {
-            if (!isLocked) return;
-
-            const speed = keys.shift ? 10 : 5.5;
-            const dir = new THREE.Vector3();
-            camera.getWorldDirection(dir);
-            dir.y = 0;
-            dir.normalize();
-            const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
-
-            const mx = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
-            const mz = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
-            const moveVec = new THREE.Vector3();
-            moveVec.addScaledVector(dir, -mz);
-            moveVec.addScaledVector(right, mx);
-            moveVec.y = 0;
-            if (moveVec.length() > 0) moveVec.normalize().multiplyScalar(speed * delta);
-
-            // X
-            const newX = camera.position.clone();
-            newX.x += moveVec.x;
-            if (canMoveTo(newX)) camera.position.x = newX.x;
-            else {
-                const sx = camera.position.clone();
-                sx.x += moveVec.x;
-                sx.y += 0.1;
-                if (canMoveTo(sx)) camera.position.x = sx.x;
-            }
-
-            // Z
-            const newZ = camera.position.clone();
-            newZ.z += moveVec.z;
-            if (canMoveTo(newZ)) camera.position.z = newZ.z;
-            else {
-                const sz = camera.position.clone();
-                sz.z += moveVec.z;
-                sz.y += 0.1;
-                if (canMoveTo(sz)) camera.position.z = sz.z;
-            }
-
-            // Y
-            velocity.y += GRAVITY * delta;
-            if (keys.space && isOnGround) {
-                velocity.y = JUMP_SPEED;
-                isOnGround = false;
-            }
-
-            const newY = camera.position.clone();
-            newY.y += velocity.y * delta;
-            if (canMoveTo(newY)) {
-                camera.position.y = newY.y;
-                isOnGround = false;
-            } else {
-                if (velocity.y < 0) {
-                    isOnGround = true;
-                    let sy = camera.position.y;
-                    for (let step = 0; step < 100; step++) {
-                        const test = new THREE.Vector3(camera.position.x, sy + step * 0.01, camera.position.z);
-                        if (!canMoveTo(test)) {
-                            camera.position.y = test.y - 0.01;
-                            break;
-                        }
-                    }
-                }
-                velocity.y = 0;
-            }
-
-            const groundCheck = camera.position.clone();
-            groundCheck.y -= 0.05;
-            if (!canMoveTo(groundCheck)) isOnGround = true;
-
-            if (camera.position.y < -60) {
-                camera.position.set(0, 5, 0);
-                velocity.y = 0;
-                isOnGround = false;
-            }
-            if (velocity.y < -20) velocity.y = -20;
-
-            document.getElementById('coord').textContent =
-                `📍 ${Math.round(camera.position.x*10)/10}, ${Math.round(camera.position.y*10)/10}, ${Math.round(camera.position.z*10)/10}`;
-        }
-
-        // ----- ПОДСВЕТКА -----
-        function updateHighlight() {
-            const hit = getIntersectedBlock();
-            if (hit && isLocked) {
-                highlightMesh.position.set(hit.pos[0] + 0.5, hit.pos[1] + 0.5, hit.pos[2] + 0.5);
-                highlightMesh.visible = true;
-            } else {
-                highlightMesh.visible = false;
-            }
-        }
-
-        // ----- ГЕНЕРАЦИЯ МИРА -----
-        function generateWorld() {
-            const half = WORLD_SIZE_X / 2;
-            const startTime = performance.now();
-            document.getElementById('loading').style.display = 'block';
-
-            for (let x = -half; x < half; x++) {
-                for (let z = -half; z < half; z++) {
-                    addBlock(x, 0, z, 'grass');
-                    addBlock(x, -1, z, 'dirt');
-                    for (let y = -2; y >= -5; y--) addBlock(x, y, z, 'dirt');
-                    for (let y = -6; y >= -49; y--) addBlock(x, y, z, 'stone');
-                    if (Math.random() < 0.03 && Math.abs(x) > 3 && Math.abs(z) > 3) {
-                        const h = 4 + Math.floor(Math.random() * 2);
-                        for (let i = 1; i <= h; i++) addBlock(x, i, z, 'wood');
-                        for (let dx = -1; dx <= 1; dx++) {
-                            for (let dz = -1; dz <= 1; dz++) {
-                                for (let dy = 0; dy <= 1; dy++) {
-                                    const d2 = Math.abs(dx) + Math.abs(dz) + Math.abs(dy);
-                                    if (d2 <= 2 && !(dx === 0 && dz === 0 && dy === 0)) {
-                                        if (Math.random() > 0.3) addBlock(x+dx, h+dy, z+dz, 'leaves');
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                if (x % 5 === 0) {
-                    const progress = ((x + half) / WORLD_SIZE_X * 100).toFixed(0);
-                    document.getElementById('loading').textContent = `Генерация мира... ${progress}%`;
-                }
-            }
-
-            document.getElementById('loading').style.display = 'none';
-            console.log(`Мир сгенерирован: ${blocks.size} блоков за ${(performance.now() - startTime).toFixed(0)} мс`);
-        }
-
-        generateWorld();
-
-        // ----- КОРРЕКЦИЯ ПОЗИЦИИ ПОСЛЕ ГЕНЕРАЦИИ -----
-        fixPlayerPosition();
-
-        // ----- FPS -----
-        let frameCount = 0, lastFpsTime = performance.now();
-        function updateFps() {
-            frameCount++;
-            const now = performance.now();
-            if (now - lastFpsTime >= 1000) {
-                document.getElementById('fpsCounter').textContent = frameCount;
-                frameCount = 0;
-                lastFpsTime = now;
-            }
-        }
-
-        // ----- АДАПТАЦИЯ ОКНА -----
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // ----- ГЛАВНЫЙ ЦИКЛ -----
-        let clock = new THREE.Clock();
-        function animate() {
-            const delta = Math.min(clock.getDelta(), 0.05);
-            updatePhysics(delta);
-            updateHighlight();
-            renderer.render(scene, camera);
-            updateFps();
-            requestAnimationFrame(animate);
-        }
-        animate();
-
-        console.log('✅ Игрок защищён от проваливания при появлении!');
-    </script>
+    <!-- Футер -->
+    <div class="footer-note">
+      <span><i class="far fa-copyright"></i> 2026 · Максим Ткачев</span>
+      <div class="social">
+        <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
+        <a href="#" aria-label="Telegram"><i class="fab fa-telegram"></i></a>
+        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+        <a href="#" aria-label="Хабр"><i class="fab fa-habr"></i></a>
+      </div>
+    </div>
+  </div>
 </body>
-</html>
+</html>`
